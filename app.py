@@ -1,6 +1,10 @@
 import random
 import streamlit as st
 
+# FIX: Agent diagnosed swapped hint directions in check_guess; refactored the fixed version into logic_utils.py so app and tests share one source of truth.
+from logic_utils import check_guess
+
+
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
         return 1, 20
@@ -27,24 +31,6 @@ def parse_guess(raw: str):
         return False, None, "That is not a number."
 
     return True, value, None
-
-
-def check_guess(guess, secret):
-    if guess == secret:
-        return "Win", "🎉 Correct!"
-
-    try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
-        else:
-            return "Too Low", "📉 Go LOWER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
@@ -93,7 +79,8 @@ if "secret" not in st.session_state:
     st.session_state.secret = random.randint(low, high)
 
 if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
+    # FIX: Agent flagged initial value of 1 as off-by-one in the "Attempts left" counter; changed to 0 after I confirmed the behavior.
+    st.session_state.attempts = 0
 
 if "score" not in st.session_state:
     st.session_state.score = 0
@@ -104,10 +91,14 @@ if "status" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-st.subheader("Make a guess")
+# FIX: Added by the agent to persist the last directional hint across reruns so the "Show hint" checkbox can toggle visibility without a new guess.
+if "last_hint" not in st.session_state:
+    st.session_state.last_hint = None
 
+st.subheader("Make a guess")
+# FIX: Agent noticed the banner always said "between 1 and 100" regardless of difficulty; swapped the literals for {low}/{high}.
 st.info(
-    f"Guess a number between 1 and 100. "
+    f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
 )
 
@@ -129,11 +120,17 @@ with col1:
 with col2:
     new_game = st.button("New Game 🔁")
 with col3:
-    show_hint = st.checkbox("Show hint", value=True)
+    # FIX: Agent explained that value=True meant clicking "Show hint" actually turned hints OFF; flipped default to False so a click enables them.
+    show_hint = st.checkbox("Show hint", value=False)
 
 if new_game:
+    # FIX: Agent traced the lingering "Correct!" banner to this handler only resetting attempts/secret; added score/status/history/last_hint resets and switched to randint(low, high).
     st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    st.session_state.secret = random.randint(low, high)
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
+    st.session_state.last_hint = None
     st.success("New game started.")
     st.rerun()
 
@@ -155,15 +152,9 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
-
-        outcome, message = check_guess(guess_int, secret)
-
-        if show_hint:
-            st.warning(message)
+        # FIX: Agent pointed out the "attempts % 2 == 0: str(secret)" branch was sabotaging comparisons on every even guess; passing the raw int secret now, and stashing the hint in state so the render path below can toggle it.
+        outcome, message = check_guess(guess_int, st.session_state.secret)
+        st.session_state.last_hint = message
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
@@ -186,6 +177,10 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+# FIX: Agent moved hint rendering out of the submit branch so toggling the checkbox after a guess actually shows/hides the stored hint without requiring a resubmit.
+if show_hint and st.session_state.last_hint:
+    st.warning(st.session_state.last_hint)
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
