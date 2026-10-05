@@ -26,18 +26,28 @@ It wrote the code, ran away, and now the game is unplayable.
 ## 📝 Document Your Experience
 
 - [ ] Describe the game's purpose.
+A simple number-guessing game where the player tries to guess a secret number within a limited number of attempts, using "higher" or "lower" hints to narrow it down.
 - [ ] Detail which bugs you found.
+ - The game always said "between 1 and 100" even on Easy or Hard, and the hints pointed the wrong way (telling me to go lower when I needed to go higher).
+  - After winning and clicking New Game, the "You already won" message wouldn't go away.
+  - The "Show hint" checkbox didn't actually show me a hint when I clicked it.
 - [ ] Explain what fixes you applied.
+ - Made the range message match the chosen difficulty and swapped the hint directions so
+they point toward the secret.
+  - Made New Game fully reset the game, score, status, and messages included, so a fresh
+ round actually starts fresh.
+  - Flipped the hint checkbox so clicking it turns hints on, and made the last hint stay visible so toggling the box works right away.
 
 ## 📸 Demo Walkthrough
 
 Describe your fixed game in numbered steps so a reader can follow along without watching a video:
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+1. The number to guess is let's say 27. User guesses 47
+2. The game returns Too High
+3. The user guesses 15
+4. Game returns Too Low
+5. The user guesses 27
+6. Game ends because you guessed the correct number and have the option to restart a new game
 
 **Screenshot** *(optional)*: <!-- Insert a screenshot of your fixed, winning game here -->
 
